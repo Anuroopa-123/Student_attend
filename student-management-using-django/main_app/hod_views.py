@@ -495,10 +495,10 @@ def view_student_leave(request):
 
 
 def admin_view_attendance(request):
-    subjects = Subject.objects.all()
+    courses = Course.objects.all()
     sessions = Session.objects.all()
     context = {
-        'subjects': subjects,
+        'courses': courses,
         'sessions': sessions,
         'page_title': 'View Attendance'
     }
