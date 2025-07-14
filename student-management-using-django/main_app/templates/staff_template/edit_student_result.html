@@ -46,14 +46,14 @@
 {% block custom_js %}
 <script>
     $(document).ready(function () {
-        $("#id_subject").change(function () {
+        $("#id_course").change(function () {
             fetchStudents();
             });
             $("#id_session_year").change(function () {
                 fetchStudents();
                 });
-   $("#id_student").change(function () {
-    fetch_student_result();
+            $("#id_student").change(function () {
+                fetch_student_result();
                 });
                 $("#id_exam").hide()
                 $("#id_test").hide()
@@ -61,17 +61,17 @@
                 $('label[for="id_test"]').hide();
                 $('label[for="id_exam"]').hide();
         function fetchStudents(){
-            var subject = $("#id_subject").val()
+            var course = $("#id_course").val();
             var session = $("#id_session_year").val()
             $("#id_student").html(null)
-            if (session.length  == 0 || subject.length == 0 || session < 1 || subject < 1){
+            if (session.length  == 0 || course.length == 0 ||  session < 1 || course < 1){
                 return false;
             }
             $.ajax({
                 url: "{% url 'get_students' %}",
                 type: 'POST',
                 data: {
-                    subject: subject,
+                    course: course,
                     session:session
                 }
             }).done(function (response) {
@@ -94,7 +94,9 @@
 
                function fetch_student_result(){
                 var student = $("#id_student").val()
-                var subject = $("#id_subject").val()
+                var course = $("#id_course").val();
+                 console.log('Student:', student);  
+                 console.log('Course:', course);
                 $("#id_test").val(null)
                 $("#id_exam").val(null)
                 $("#id_exam").hide()
@@ -102,14 +104,14 @@
                 $("#id_test").hide()
                 $('label[for="id_test"]').hide();
                 $('label[for="id_exam"]').hide();
-                if (student.length  == 0 || subject.length == 0 || student < 1 || subject < 1){
+                if (student.length  == 0 || course.length == 0 || student < 1 || course < 1){
                     return false;
                 }
                 $.ajax({
                     url: "{% url 'fetch_student_result' %}",
                     type: 'POST',
                     data: {
-                        subject: subject,
+                        course:course,
                         student:student
                     }
                 }).done(function (response) {

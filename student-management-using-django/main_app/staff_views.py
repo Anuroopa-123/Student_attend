@@ -52,13 +52,13 @@ def staff_take_attendance(request):
 
 @csrf_exempt
 def get_students(request):
-    subject_id = request.POST.get('subject')
+    course_id = request.POST.get('course') 
     session_id = request.POST.get('session')
     try:
-        subject = get_object_or_404(Subject, id=subject_id)
+        course = get_object_or_404(Course, id=course_id)
         session = get_object_or_404(Session, id=session_id)
         students = Student.objects.filter(
-            course_id=subject.course.id, session=session)
+            course=course, session=session)
         student_data = []
         for student in students:
             data = {
@@ -264,30 +264,30 @@ def staff_view_notification(request):
 
 def staff_add_result(request):
     staff = get_object_or_404(Staff, admin=request.user)
-    subjects = Subject.objects.filter(staff=staff)
+    courses = Course.objects.filter(staff=staff) 
     sessions = Session.objects.all()
     context = {
         'page_title': 'Result Upload',
-        'subjects': subjects,
+        'courses': courses,
         'sessions': sessions
     }
     if request.method == 'POST':
         try:
             student_id = request.POST.get('student_list')
-            subject_id = request.POST.get('subject')
+            course_id = request.POST.get('course') 
             test = request.POST.get('test')
             exam = request.POST.get('exam')
             student = get_object_or_404(Student, id=student_id)
-            subject = get_object_or_404(Subject, id=subject_id)
+            course = get_object_or_404(Course, id=course_id)
             try:
                 data = StudentResult.objects.get(
-                    student=student, subject=subject)
+                    student=student, course=course)
                 data.exam = exam
                 data.test = test
                 data.save()
                 messages.success(request, "Scores Updated")
             except:
-                result = StudentResult(student=student, subject=subject, test=test, exam=exam)
+                result = StudentResult(student=student, course=course, test=test, exam=exam)
                 result.save()
                 messages.success(request, "Scores Saved")
         except Exception as e:
@@ -298,11 +298,11 @@ def staff_add_result(request):
 @csrf_exempt
 def fetch_student_result(request):
     try:
-        subject_id = request.POST.get('subject')
+        course_id = request.POST.get('course')
         student_id = request.POST.get('student')
         student = get_object_or_404(Student, id=student_id)
-        subject = get_object_or_404(Subject, id=subject_id)
-        result = StudentResult.objects.get(student=student, subject=subject)
+        course = get_object_or_404(Course, id=course_id)
+        result = StudentResult.objects.get(student=student, course=course)
         result_data = {
             'exam': result.exam,
             'test': result.test

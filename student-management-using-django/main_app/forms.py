@@ -188,4 +188,5 @@ class EditResultForm(FormSettings):
 
     class Meta:
         model = StudentResult
-        fields = ['session_year', 'subject', 'student', 'test', 'exam']
+        fields = ['session_year','subject', 'student', 'test', 'exam']  
+
