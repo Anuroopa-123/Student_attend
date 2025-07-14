@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.views.decorators.csrf import csrf_exempt
 
 from .EmailBackend import EmailBackend
-from .models import Attendance, Session, Subject
+from .models import Attendance, Session, Subject,Course
 
 # Create your views here.
 
@@ -67,26 +67,31 @@ def logout_user(request):
         logout(request)
     return redirect("/")
 
-
 @csrf_exempt
 def get_attendance(request):
-    subject_id = request.POST.get('subject')
+    course_id = request.POST.get('course')
     session_id = request.POST.get('session')
+
+    if not course_id or not session_id:
+        return JsonResponse({"error": "Course and Session must be provided."}, status=400)
+
     try:
-        subject = get_object_or_404(Subject, id=subject_id)
+        course = get_object_or_404(Course, id=course_id) 
         session = get_object_or_404(Session, id=session_id)
-        attendance = Attendance.objects.filter(subject=subject, session=session)
-        attendance_list = []
-        for attd in attendance:
-            data = {
-                    "id": attd.id,
-                    "attendance_date": str(attd.date),
-                    "session": attd.session.id
-                    }
-            attendance_list.append(data)
-        return JsonResponse(json.dumps(attendance_list), safe=False)
+
+        attendance = Attendance.objects.filter(course=course, session=session)
+        
+        attendance_list = [{
+            "id": att.id,
+            "attendance_date": att.date,
+            "session": att.session.id
+        } for att in attendance]
+
+        return JsonResponse(attendance_list, safe=False)
+
     except Exception as e:
-        return None
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 
 def showFirebaseJS(request):

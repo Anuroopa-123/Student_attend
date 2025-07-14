@@ -17,28 +17,32 @@ from .models import *
 def admin_home(request):
     total_staff = Staff.objects.all().count()
     total_students = Student.objects.all().count()
-    subjects = Subject.objects.all()
-    total_subject = subjects.count()
-    total_course = Course.objects.all().count()
-    attendance_list = Attendance.objects.filter(subject__in=subjects)
-    total_attendance = attendance_list.count()
+    
+    courses = Course.objects.all()
+    total_course = courses.count()
+    
+    # Initialize lists to store course names and attendance counts
     attendance_list = []
-    subject_list = []
-    for subject in subjects:
-        attendance_count = Attendance.objects.filter(subject=subject).count()
-        subject_list.append(subject.name[:7])
+    course_list = []
+    
+    # Iterate through each course and get the attendance count for that course
+    for course in courses:
+        attendance_count = Attendance.objects.filter(course=course).count()
+        course_list.append(course.name[:7])  # Taking first 7 characters of course name
         attendance_list.append(attendance_count)
+    
+    # Prepare context to pass to the template
     context = {
         'page_title': "Administrative Dashboard",
         'total_students': total_students,
         'total_staff': total_staff,
         'total_course': total_course,
-        'total_subject': total_subject,
-        'subject_list': subject_list,
-        'attendance_list': attendance_list
-
+        'course_list': course_list,
+        'attendance_list': attendance_list,
     }
+    
     return render(request, 'hod_template/home_content.html', context)
+
 
 
 def add_staff(request):
