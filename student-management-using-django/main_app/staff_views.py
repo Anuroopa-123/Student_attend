@@ -2,6 +2,8 @@ import json
 
 from django.contrib import messages
 from django.core.files.storage import FileSystemStorage
+from django.db import IntegrityError
+from django.forms import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import (HttpResponseRedirect, get_object_or_404,redirect, render)
 from django.urls import reverse
@@ -17,16 +19,20 @@ def staff_home(request):
     total_leave = LeaveReportStaff.objects.filter(staff=staff).count()
     subjects = Subject.objects.filter(staff=staff)
     total_subject = subjects.count()
-    attendance_list = Attendance.objects.filter(subject__in=subjects)
+    attendance_list = Attendance.objects.filter(course=staff.course)  
     total_attendance = attendance_list.count()
     attendance_list = []
     subject_list = []
+    
     for subject in subjects:
-        attendance_count = Attendance.objects.filter(subject=subject).count()
+        
+        attendance_count = Attendance.objects.filter(course=staff.course).count()  
         subject_list.append(subject.name)
         attendance_list.append(attendance_count)
+    
+    
     context = {
-        'page_title': 'Staff Panel - ' + str(staff.admin.last_name) + ' (' + str(staff.course) + ')',
+        'page_title': f'Staff Panel - {staff.admin.last_name} ({staff.course})',
         'total_students': total_students,
         'total_attendance': total_attendance,
         'total_leave': total_leave,
@@ -34,15 +40,16 @@ def staff_home(request):
         'subject_list': subject_list,
         'attendance_list': attendance_list
     }
-    return render(request, 'staff_template/home_content.html', context)
+    
 
+    return render(request, 'staff_template/home_content.html', context)
 
 def staff_take_attendance(request):
     staff = get_object_or_404(Staff, admin=request.user)
-    subjects = Subject.objects.filter(staff_id=staff)
+    courses = Course.objects.filter(staff=staff) 
     sessions = Session.objects.all()
     context = {
-        'subjects': subjects,
+        'courses': courses,
         'sessions': sessions,
         'page_title': 'Take Attendance'
     }
@@ -76,39 +83,43 @@ def get_students(request):
 def save_attendance(request):
     student_data = request.POST.get('student_ids')
     date = request.POST.get('date')
-    subject_id = request.POST.get('subject')
+    course_id = request.POST.get('course')
     session_id = request.POST.get('session')
     students = json.loads(student_data)
-    try:
-        session = get_object_or_404(Session, id=session_id)
-        subject = get_object_or_404(Subject, id=subject_id)
 
-        # Check if an attendance object already exists for the given date and session
-        attendance, created = Attendance.objects.get_or_create(session=session, subject=subject, date=date)
+    try:
+ 
+        session = get_object_or_404(Session, id=session_id)
+        course = get_object_or_404(Course, id=course_id)
+
+   
+        attendance, created = Attendance.objects.get_or_create(session=session, course=course, date=date)
 
         for student_dict in students:
             student = get_object_or_404(Student, id=student_dict.get('id'))
 
-            # Check if an attendance report already exists for the student and the attendance object
+          
             attendance_report, report_created = AttendanceReport.objects.get_or_create(student=student, attendance=attendance)
 
-            # Update the status only if the attendance report was newly created
             if report_created:
                 attendance_report.status = student_dict.get('status')
                 attendance_report.save()
 
+        return HttpResponse("OK")  
     except Exception as e:
-        return None
+       
+        print(f"Error: {str(e)}")
 
-    return HttpResponse("OK")
+        
+        return HttpResponse(f"Error: {str(e)}", status=500) 
 
 
 def staff_update_attendance(request):
     staff = get_object_or_404(Staff, admin=request.user)
-    subjects = Subject.objects.filter(staff_id=staff)
+    courses = Course.objects.filter(staff=staff)
     sessions = Session.objects.all()
     context = {
-        'subjects': subjects,
+        'courses': courses,
         'sessions': sessions,
         'page_title': 'Update Attendance'
     }
@@ -262,38 +273,66 @@ def staff_view_notification(request):
     return render(request, "staff_template/staff_view_notification.html", context)
 
 
+
 def staff_add_result(request):
     staff = get_object_or_404(Staff, admin=request.user)
-    courses = Course.objects.filter(staff=staff) 
+    courses = Course.objects.filter(staff=staff)
     sessions = Session.objects.all()
+
     context = {
         'page_title': 'Result Upload',
         'courses': courses,
         'sessions': sessions
     }
+    
     if request.method == 'POST':
         try:
+            # Get form data
             student_id = request.POST.get('student_list')
-            course_id = request.POST.get('course') 
+            course_id = request.POST.get('course')
             test = request.POST.get('test')
             exam = request.POST.get('exam')
+
+            # Validate if all fields are provided
+            if not student_id or not course_id or not test or not exam:
+                messages.warning(request, "Error: Missing required fields (student, course, test score, or exam score).")
+                return render(request, "staff_template/staff_add_result.html", context)
+
+            # Ensure that test and exam are valid integers
+            try:
+                test = int(test)  # Convert test score to integer
+                exam = int(exam)  # Convert exam score to integer
+            except ValueError:
+                messages.warning(request, "Error: Test and Exam scores must be valid numbers.")
+                return render(request, "staff_template/staff_add_result.html", context)
+
+            # Get the student and course objects
             student = get_object_or_404(Student, id=student_id)
             course = get_object_or_404(Course, id=course_id)
+
+            # Try to get or create the StudentResult
             try:
-                data = StudentResult.objects.get(
-                    student=student, course=course)
-                data.exam = exam
-                data.test = test
-                data.save()
-                messages.success(request, "Scores Updated")
-            except:
+                # Try to update existing result
+                result = StudentResult.objects.get(student=student, course=course)
+                result.test = test
+                result.exam = exam
+                result.save()
+                messages.success(request, "Scores updated successfully!")
+            except StudentResult.DoesNotExist:
+                # If the result doesn't exist, create a new one
                 result = StudentResult(student=student, course=course, test=test, exam=exam)
                 result.save()
-                messages.success(request, "Scores Saved")
-        except Exception as e:
-            messages.warning(request, "Error Occured While Processing Form")
-    return render(request, "staff_template/staff_add_result.html", context)
+                messages.success(request, "Scores saved successfully!")
 
+        except IntegrityError:
+            messages.warning(request, "Database integrity error. Please try again.")
+        except ValidationError as ve:
+            messages.warning(request, f"Validation error: {ve}")
+        except Exception as e:
+            # Catch any other unexpected errors
+            messages.warning(request, f"Error occurred while processing the form: {str(e)}")
+        
+    return render(request, "staff_template/staff_add_result.html", context)
 
 @csrf_exempt
 def fetch_student_result(request):

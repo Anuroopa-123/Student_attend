@@ -15,42 +15,56 @@ from .models import *
 
 
 def student_home(request):
+    # Get the logged-in student
     student = get_object_or_404(Student, admin=request.user)
-    total_subject = Subject.objects.filter(course=student.course).count()
+
+    # Get the course the student is enrolled in
+    course = student.course  # directly accessing student's course
+
+    # Get the total number of attendance reports for the student
     total_attendance = AttendanceReport.objects.filter(student=student).count()
     total_present = AttendanceReport.objects.filter(student=student, status=True).count()
-    if total_attendance == 0:  # Don't divide. DivisionByZero
-        percent_absent = percent_present = 0
+
+    # Handle division by zero for percentages
+    if total_attendance == 0:
+        percent_present = percent_absent = 0
     else:
-        percent_present = math.floor((total_present/total_attendance) * 100)
-        percent_absent = math.ceil(100 - percent_present)
-    subject_name = []
+        percent_present = math.floor((total_present / total_attendance) * 100)
+        percent_absent = 100 - percent_present  # Percent absent can be calculated directly
+
+    # Data lists to store information
+    course_name = []
     data_present = []
     data_absent = []
-    subjects = Subject.objects.filter(course=student.course)
-    for subject in subjects:
-        attendance = Attendance.objects.filter(subject=subject)
+
+    # Get all attendance records for this student's course
+    attendance = Attendance.objects.filter(course=course)
+
+    for record in attendance:
+        # Get attendance report for each attendance record
         present_count = AttendanceReport.objects.filter(
-            attendance__in=attendance, status=True, student=student).count()
+            attendance=record, status=True, student=student).count()
         absent_count = AttendanceReport.objects.filter(
-            attendance__in=attendance, status=False, student=student).count()
-        subject_name.append(subject.name)
+            attendance=record, status=False, student=student).count()
+
+        # Store data for rendering
+        course_name.append(course.name)
         data_present.append(present_count)
         data_absent.append(absent_count)
+
+    # Prepare context to pass to the template
     context = {
         'total_attendance': total_attendance,
         'percent_present': percent_present,
         'percent_absent': percent_absent,
-        'total_subject': total_subject,
-        'subjects': subjects,
+        'course': course,  # Passing the student's course
         'data_present': data_present,
         'data_absent': data_absent,
-        'data_name': subject_name,
+        'data_name': course_name,
         'page_title': 'Student Homepage'
-
     }
-    return render(request, 'student_template/home_content.html', context)
 
+    return render(request, 'student_template/home_content.html', context)
 
 @ csrf_exempt
 def student_view_attendance(request):

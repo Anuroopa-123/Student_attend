@@ -19,12 +19,12 @@
 
 
 
-                        <div class="form-group">
-                            <label>Subject</label>
-                            <select name="subject" class="form-control" id='subject'>
+                          <div class="form-group">
+                            <label>Course</label>
+                            <select name="course" class="form-control" id='course'>
                                 <option value="">----</option>
-                                {% for subject in subjects  %}
-                                <option value="{{subject.id}}">{{subject.name}}</option>
+                                {% for course in courses %}
+                                <option value="{{course.id}}">{{course.name}}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -80,26 +80,29 @@
 <script>
     $(document).ready(function () {
         $("#fetch_attendance").click(function(){
-            var subject = $("#subject").val()
+            var course = $("#course").val(); 
             var session = $("#session").val()
-            if (session.length < 1 || subject.length < 1){
+            if (session.length < 1 || course.length < 1){
                 $("#error_attendance").html("Kindly Choose Both Subject and Session")
                 $("#attendance_block").hide()
                 $("#error_attendance").show()
                 return false
             }
+
+            
+       
             $.ajax({
                 url: "{% url 'get_attendance' %}",
                 type: 'POST',
                 data:{
-                    subject:subject,
+                    course: course,
                     session:session
                 }
             
             }
 
             ).done(function(response){
-                var json_data = JSON.parse(response)
+                var json_data = response;
                 if (json_data.length > 0){
 
                     var html = "";
