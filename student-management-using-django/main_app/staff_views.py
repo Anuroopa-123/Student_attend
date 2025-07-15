@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from django.contrib import messages
@@ -7,6 +8,7 @@ from django.forms import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import (HttpResponseRedirect, get_object_or_404,redirect, render)
 from django.urls import reverse
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
 from .forms import *
@@ -77,8 +79,6 @@ def get_students(request):
     except Exception as e:
         return e
 
-
-
 @csrf_exempt
 def save_attendance(request):
     student_data = request.POST.get('student_ids')
@@ -114,10 +114,16 @@ def save_attendance(request):
         return HttpResponse(f"Error: {str(e)}", status=500) 
 
 
+
+
+
+@csrf_exempt
 def staff_update_attendance(request):
     staff = get_object_or_404(Staff, admin=request.user)
     courses = Course.objects.filter(staff=staff)
     sessions = Session.objects.all()
+
+    # This part will remain the same unless you want to fetch attendance for a specific date range.
     context = {
         'courses': courses,
         'sessions': sessions,
@@ -125,43 +131,78 @@ def staff_update_attendance(request):
     }
 
     return render(request, 'staff_template/staff_update_attendance.html', context)
-
-
 @csrf_exempt
 def get_student_attendance(request):
     attendance_date_id = request.POST.get('attendance_date_id')
     try:
         date = get_object_or_404(Attendance, id=attendance_date_id)
         attendance_data = AttendanceReport.objects.filter(attendance=date)
+        
         student_data = []
         for attendance in attendance_data:
-            data = {"id": attendance.student.admin.id,
-                    "name": attendance.student.admin.last_name + " " + attendance.student.admin.first_name,
-                    "status": attendance.status}
-            student_data.append(data)
-        return JsonResponse(json.dumps(student_data), content_type='application/json', safe=False)
-    except Exception as e:
-        return e
+            student = attendance.student  # Get the student object directly
 
+            data = {
+                "id": student.admin.id,  # Assuming `admin` is the related `User` model
+                "name": f"{student.admin.first_name} {student.admin.last_name}",  # Name formatting
+                "status": attendance.status,
+            }
+            student_data.append(data)
+
+        return JsonResponse(student_data, safe=False)  # No need for json.dumps() here, JsonResponse will do that for you
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
-def update_attendance(request):
-    student_data = request.POST.get('student_ids')
-    date = request.POST.get('date')
-    students = json.loads(student_data)
-    try:
-        attendance = get_object_or_404(Attendance, id=date)
+def update_attendance(request): 
+    if request.method == 'POST':
+        try:
+            # Get the date and student_ids from the POST request
+            student_data = request.POST.get('student_ids')
+            date = request.POST.get('date')
 
-        for student_dict in students:
-            student = get_object_or_404(
-                Student, admin_id=student_dict.get('id'))
-            attendance_report = get_object_or_404(AttendanceReport, student=student, attendance=attendance)
-            attendance_report.status = student_dict.get('status')
-            attendance_report.save()
-    except Exception as e:
-        return None
+            # If student_data is None or empty, return an error message
+            if not student_data or not date:
+                return JsonResponse({'error': 'Missing data for student_ids or date'}, status=400)
 
-    return HttpResponse("OK")
+            # Parse the student data from the JSON string
+            students = json.loads(student_data)
+
+            # Get the attendance record for the specified date
+            attendance = get_object_or_404(Attendance, id=date)
+
+            # Process the students' attendance data
+            updated_attendance = []
+            for student_dict in students:
+                student = get_object_or_404(Student, admin_id=student_dict.get('id'))
+
+                # Get the attendance report for the student
+                try:
+                    attendance_report = AttendanceReport.objects.get(student=student, attendance=attendance)
+                    attendance_report.status = student_dict.get('status')
+                    attendance_report.save()
+                    updated_attendance.append({
+                        "student": student_dict.get('id'),
+                        "status": student_dict.get('status')
+                    })
+                except AttendanceReport.DoesNotExist:
+                    return JsonResponse({'error': f'Attendance report not found for student {student_dict.get("id")}'}, status=404)
+
+            # Send a successful response with the updated attendance data
+            return JsonResponse({
+                'status': 'OK',
+                'updated_attendance': updated_attendance,
+                'message': 'Attendance successfully updated'
+            }, status=200)
+
+        except Exception as e:
+            # Log the exception for debugging
+            print(f"Error: {str(e)}")
+            return JsonResponse({'error': f'An error occurred while updating the attendance: {str(e)}'}, status=500)
+
+    else:
+        return JsonResponse({'error': 'Invalid request method, POST required'}, status=405)
 
 
 def staff_apply_leave(request):

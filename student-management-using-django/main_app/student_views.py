@@ -66,38 +66,50 @@ def student_home(request):
 
     return render(request, 'student_template/home_content.html', context)
 
-@ csrf_exempt
+@csrf_exempt
 def student_view_attendance(request):
-    student = get_object_or_404(Student, admin=request.user)
+    student = get_object_or_404(Student, admin=request.user)  # Get the student instance
+
     if request.method != 'POST':
-        course = get_object_or_404(Course, id=student.course.id)
+        # Get the course the student is enrolled in
+        course = student.course  # Directly use the student's course
+        # Fetch attendance data for the course
+        attendance = Attendance.objects.filter(course=course)
+
         context = {
-            'subjects': Subject.objects.filter(course=course),
-            'page_title': 'View Attendance'
+            'course': course,
+            'attendance': attendance,
+            'page_title': 'View Attendance',
         }
         return render(request, 'student_template/student_view_attendance.html', context)
+
     else:
-        subject_id = request.POST.get('subject')
+        # Handle POST request (for fetching attendance within a specific date range)
         start = request.POST.get('start_date')
         end = request.POST.get('end_date')
+
         try:
-            subject = get_object_or_404(Subject, id=subject_id)
             start_date = datetime.strptime(start, "%Y-%m-%d")
             end_date = datetime.strptime(end, "%Y-%m-%d")
+
+            # Filter attendance based on course and date range
             attendance = Attendance.objects.filter(
-                date__range=(start_date, end_date), subject=subject)
-            attendance_reports = AttendanceReport.objects.filter(
-                attendance__in=attendance, student=student)
+                date__range=(start_date, end_date), 
+                course=student.course
+            )
+
             json_data = []
-            for report in attendance_reports:
+            for record in attendance:
                 data = {
-                    "date":  str(report.attendance.date),
-                    "status": report.status
+                    "date": str(record.date),
+                    "session": str(record.session),  # Optional: If you want to display the session as well
                 }
                 json_data.append(data)
+
             return JsonResponse(json.dumps(json_data), safe=False)
+
         except Exception as e:
-            return None
+            return JsonResponse({"error": str(e)}, status=400)
 
 
 def student_apply_leave(request):

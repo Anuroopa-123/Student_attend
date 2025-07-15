@@ -108,6 +108,9 @@ class Attendance(models.Model):
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Attendance for {self.course.name} on {self.date}"
 
 
 class AttendanceReport(models.Model):
