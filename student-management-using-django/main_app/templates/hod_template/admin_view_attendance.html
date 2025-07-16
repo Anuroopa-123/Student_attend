@@ -112,111 +112,111 @@
 </section>
 {% endblock content %} {% block custom_js %}
 <script>
-  $(document).ready(function () {
-    $("#fetch_attendance").click(function () {
-      var course = $("#course").val();
-      var session = $("#session").val();
-      $("#student_data").html(""); // Clear previous data
+ $(document).ready(function () {
+  $("#fetch_attendance").click(function () {
+    var course = $("#course").val();
+    var session = $("#session").val();
+    $("#student_data").html(""); // Clear previous data
 
-      if (session.length < 1 || course.length < 1) {
-        $("#error_attendance").html("Kindly Choose Both Course and Session");
-        $("#attendance_block").hide();
-        $("#error_attendance").show();
-        return false;
-      }
+    if (session.length < 1 || course.length < 1) {
+      $("#error_attendance").html("Kindly Choose Both Course and Session");
+      $("#attendance_block").hide();
+      $("#error_attendance").show();
+      return false;
+    }
 
-      $.ajax({
-        url: "{% url 'get_attendance' %}",
-        type: "POST",
-        data: {
-          course: course,
-          session: session,
-        },
-      })
-        .done(function (response) {
-          var json_data = JSON.parse(response);
-          if (json_data.length > 0) {
-            var html = "";
-            for (key in json_data) {
-              html +=
-                "<option value='" +
-                json_data[key]["id"] +
-                "'>" +
-                json_data[key]["attendance_date"] +
-                "</option>";
-            }
-            $("#attendance_date").html(html);
-            $("#error_attendance").hide();
-            $("#attendance_block").show();
-            $("#fetch_student_block").show();
-          } else {
-            $("#error_attendance").html(
-              "No Attendance Date Found For Specified Data"
-            );
-            $("#error_attendance").show();
-            $("#attendance_date").html("");
-            $("#attendance_block").hide();
-            $("#student_data").html("");
+    $.ajax({
+      url: "{% url 'get_attendance' %}",
+      type: "POST",
+      data: {
+        course: course,
+        session: session,
+      },
+    })
+      .done(function (response) {
+        // No need to parse response, just use it directly as it's already a JSON object
+        if (response.length > 0) {
+          var html = "";
+          for (key in response) {
+            html +=
+              "<option value='" +
+              response[key]["id"] +
+              "'>" +
+              response[key]["attendance_date"] +
+              "</option>";
           }
-        })
-        .fail(function (response) {
-          alert("Error While Fetching Data");
-          $("#error_attendance").html("");
+          $("#attendance_date").html(html);
+          $("#error_attendance").hide();
+          $("#attendance_block").show();
+          $("#fetch_student_block").show();
+        } else {
+          $("#error_attendance").html(
+            "No Attendance Date Found For Specified Data"
+          );
           $("#error_attendance").show();
+          $("#attendance_date").html("");
           $("#attendance_block").hide();
           $("#student_data").html("");
-        });
-    });
-
-    $("#fetch_student").click(function () {
-      var attendance_date = $("#attendance_date").val();
-      var session = $("#session").val();
-      var course = $("#course").val();
-      $("#student_data").html(null);
-
-      if (attendance_date.length == 0) {
-        alert("Please Choose A Date");
-        $("#save_attendance").hide();
-        return false;
-      }
-
-      $.ajax({
-        url: "{% url 'get_admin_attendance' %}",
-        type: "POST",
-        data: {
-          attendance_date_id: attendance_date,
-          session: session,
-          course: course,
-        },
+        }
       })
-        .done(function (response) {
-          var json_data = JSON.parse(response);
-          if (json_data.length < 1) {
-            alert("No data to display");
-          } else {
-            var div_data =
-              "<hr/><div class='form-group'></div><div class='form-group'> <label>Student Attendance</label><div class='row'>";
-            for (key in json_data) {
-              if (json_data[key]["status"] == "True") {
-                div_data +=
-                  "<div class='col-lg-3 attendance_div_green'><b>" +
-                  json_data[key]["name"] +
-                  "</b><br/>Present</div>";
-              } else {
-                div_data +=
-                  "<div class='col-lg-3 attendance_div_red'><b>" +
-                  json_data[key]["name"] +
-                  "</b><br/>Absent</div>";
-              }
-            }
-            div_data += "</div></div>";
-            $("#student_data").html(div_data);
-          }
-        })
-        .fail(function (response) {
-          alert("Error in fetching students");
-        });
-    });
+      .fail(function (response) {
+        alert("Error While Fetching Data");
+        $("#error_attendance").html("");
+        $("#error_attendance").show();
+        $("#attendance_block").hide();
+        $("#student_data").html("");
+      });
   });
+
+  $("#fetch_student").click(function () {
+    var attendance_date = $("#attendance_date").val();
+    var session = $("#session").val();
+    var course = $("#course").val();
+    $("#student_data").html(null);
+
+    if (attendance_date.length == 0) {
+      alert("Please Choose A Date");
+      $("#save_attendance").hide();
+      return false;
+    }
+
+    $.ajax({
+      url: "{% url 'get_admin_attendance' %}",
+      type: "POST",
+      data: {
+        attendance_date_id: attendance_date,
+        session: session,
+        course: course,
+      },
+    })
+      .done(function (response) {
+        // No need to parse response, just use it directly as it's already a JSON object
+        if (response.length < 1) {
+          alert("No data to display");
+        } else {
+          var div_data =
+            "<hr/><div class='form-group'></div><div class='form-group'> <label>Student Attendance</label><div class='row'>";
+          for (key in response) {
+            if (response[key]["status"] == "True") {
+              div_data +=
+                "<div class='col-lg-3 attendance_div_green'><b>" +
+                response[key]["name"] +
+                "</b><br/>Present</div>";
+            } else {
+              div_data +=
+                "<div class='col-lg-3 attendance_div_red'><b>" +
+                response[key]["name"] +
+                "</b><br/>Absent</div>";
+            }
+          }
+          div_data += "</div></div>";
+          $("#student_data").html(div_data);
+        }
+      })
+      .fail(function (response) {
+        alert("Error in fetching students");
+      });
+  });
+});
 </script>
 {% endblock custom_js %}

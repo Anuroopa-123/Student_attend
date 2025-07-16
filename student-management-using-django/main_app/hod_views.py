@@ -512,26 +512,35 @@ def admin_view_attendance(request):
 
 @csrf_exempt
 def get_admin_attendance(request):
-    subject_id = request.POST.get('subject')
+    # Get the 'course' ID, 'session' ID, and 'attendance_date_id' from the request
+    course_id = request.POST.get('course')  # Use 'course' instead of 'subject'
     session_id = request.POST.get('session')
     attendance_date_id = request.POST.get('attendance_date_id')
+
     try:
-        subject = get_object_or_404(Subject, id=subject_id)
+        # Fetch the course, session, and attendance objects from the database
+        course = get_object_or_404(Course, id=course_id)  # Change to 'Course'
         session = get_object_or_404(Session, id=session_id)
-        attendance = get_object_or_404(
-            Attendance, id=attendance_date_id, session=session)
-        attendance_reports = AttendanceReport.objects.filter(
-            attendance=attendance)
+        attendance = get_object_or_404(Attendance, id=attendance_date_id, session=session)
+
+        # Fetch the attendance reports for this specific attendance
+        attendance_reports = AttendanceReport.objects.filter(attendance=attendance)
+
+        # Prepare the JSON data to return
         json_data = []
         for report in attendance_reports:
             data = {
-                "status":  str(report.status),
-                "name": str(report.student)
+                "status": str(report.status),
+                "name": str(report.student),
             }
             json_data.append(data)
-        return JsonResponse(json.dumps(json_data), safe=False)
+
+        # Return the data as a JsonResponse
+        return JsonResponse(json_data, safe=False)
+
     except Exception as e:
-        return None
+        # If an error occurs, return a detailed error message
+        return JsonResponse({'error': f'Error: {str(e)}'}, status=500)
 
 
 def admin_view_profile(request):

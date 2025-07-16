@@ -185,11 +185,11 @@
         options: pieOptions
       });
 
-      var subject_list = {{ subject_list|safe|escape }};
+      var course_list = {{ course_list|safe|escape }};
       var attendance_list = {{ attendance_list }};
 
           var barChartData = {
-    labels  : subject_list,
+    labels  : course_list,
     datasets: [
     {
       label               : 'Attendance Per Subject',
