@@ -99,7 +99,7 @@
       var session = $("#session").val();
 
       if (session.length < 1 || course.length < 1) {
-        $("#error_attendance").html("Kindly Choose Both Subject and Session");
+        $("#error_attendance").html("Kindly Choose Both Course and Session");
         $("#attendance_block").hide();
         $("#error_attendance").show();
         return false;
@@ -192,7 +192,7 @@
 
     });
 
-   $(document).on("click", "#save_attendance", function () {
+$(document).on("click", "#save_attendance", function () {
   $(this).text("Saving Attendance...");
 
   var student_data = $("input[name='student_data[]']")
@@ -204,6 +204,13 @@
   var attendance_date = $("#attendance_date").val();
   var course = $("#course").val();
   var session = $("#session").val();
+
+  console.log("Sending data to server:", {
+    student_data: student_data,
+    date: attendance_date,
+    course: course,
+    session: session,
+  }); // Log data
 
   if (!attendance_date || !course || !session) {
     alert("Please select all required fields.");
@@ -229,6 +236,7 @@
       session: session,
     },
     success: function (response) {
+      console.log("Response from server:", response); // Log the server response
       if (response.status === "OK") {
         alert("Attendance saved successfully!");
         location.reload(); // Reload to show the updated data
@@ -237,12 +245,11 @@
       }
     },
     error: function (xhr, status, error) {
-      console.error("Error:", error);
+      console.error("Error:", error); // Log the error
       alert("An error occurred while saving the attendance. Please try again.");
     },
   });
-});
-
+});   
 // Helper function to validate date format (YYYY-MM-DD)
 function isValidDate(date) {
   var regex = /^\d{4}-\d{2}-\d{2}$/;  // Regex to match date in YYYY-MM-DD format
